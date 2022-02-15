@@ -8,8 +8,7 @@ class Gate:
     num_qbits = 0
     num_params = 0
     # how many configurations of this gate are supported by hardware
-    num_variations = 0
-    variations = []
+    params = []
     unitary = None
 
     def __init__(self) -> None:
@@ -42,8 +41,8 @@ class Circuit:
 
     def get_displaced_gate_unitary(self, placed_gate: list):
         key = placed_gate[0].__class__.__name__ \
-        +str(placed_gate[0].params) \
-        +str(placed_gate[1])
+            + str(placed_gate[0].params) \
+            + str(placed_gate[1])
 
         if key in displaced_gate_cache:
             return displaced_gate_cache[key]
@@ -63,7 +62,7 @@ class Circuit:
         return unitary
 
     def get_unitary(self) -> np.ndarray:
-        if self.operations == 0:
+        if len(self.operations) == 0:
             print("Can't get Unitary of a circuit with no operations")
             return None
 
