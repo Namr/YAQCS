@@ -1,6 +1,8 @@
 import numpy as np
 import math
 
+displaced_gate_cache = {}
+
 
 class Gate:
     num_qbits = 0
@@ -8,6 +10,7 @@ class Gate:
     # how many configurations of this gate are supported by hardware
     num_variations = 0
     variations = []
+    unitary = None
 
     def __init__(self) -> None:
         return
@@ -25,6 +28,7 @@ class Circuit:
     def __init__(self, qbits, qiskit_style=False):
         self.num_qbits = qbits
         self.is_qiskit_ordering = qiskit_style
+        self.operations = []
 
     def append_gate(self, gate: Gate, position):
         if self.is_qiskit_ordering:
@@ -37,6 +41,13 @@ class Circuit:
         self.operations.append((gate, position))
 
     def get_displaced_gate_unitary(self, placed_gate: list):
+        key = placed_gate[0].__class__.__name__ \
+        +str(placed_gate[0].params) \
+        +str(placed_gate[1])
+
+        if key in displaced_gate_cache:
+            return displaced_gate_cache[key]
+
         pos = placed_gate[1]
         unitary = placed_gate[0].get_unitary()
         if pos != 0:
@@ -48,6 +59,7 @@ class Circuit:
                 np.identity(
                     pow(2, self.num_qbits - pos - placed_gate[0].num_qbits)))
 
+        displaced_gate_cache[key] = unitary
         return unitary
 
     def get_unitary(self) -> np.ndarray:
@@ -65,6 +77,11 @@ class Circuit:
         return unitary
 
 
+def unitary_distance(A: np.ndarray, B: np.ndarray):
+    dist = np.sqrt(1 - (min(np.abs(np.trace(A.conj().T * B)) / len(A), 1)**2))
+    return dist
+
+
 class RXGate(Gate):
     def __init__(self, params=[math.pi / 2.0]) -> None:
         self.num_qbits = 1
@@ -77,10 +94,12 @@ class RXGate(Gate):
         return None
 
     def get_unitary(self) -> np.ndarray:
-        ct = np.cos(self.params[0] / 2.0)
-        st = np.sin(self.params[0] / 2.0)
+        if self.unitary is None:
+            ct = np.cos(self.params[0] / 2.0)
+            st = np.sin(self.params[0] / 2.0)
+            self.unitary = np.matrix([[ct, -1j * st], [-1j * st, ct]])
 
-        return np.matrix([[ct, -1j * st], [-1j * st, ct]])
+        return self.unitary
 
 
 class RYGate(Gate):
@@ -95,10 +114,13 @@ class RYGate(Gate):
         return None
 
     def get_unitary(self) -> np.ndarray:
-        ct = np.cos(self.params[0] / 2.0)
-        st = np.sin(self.params[0] / 2.0)
+        if self.unitary is None:
+            ct = np.cos(self.params[0] / 2.0)
+            st = np.sin(self.params[0] / 2.0)
 
-        return np.matrix([[ct, -1 * st], [st, ct]])
+            self.unitary = np.matrix([[ct, -1 * st], [st, ct]])
+
+        return self.unitary
 
 
 class RZGate(Gate):
@@ -113,8 +135,10 @@ class RZGate(Gate):
         return None
 
     def get_unitary(self) -> np.ndarray:
-        return np.matrix([[np.exp(-1j * self.params[0] / 2.0), 0],
-                          [0, np.exp(1j * self.params[0] / 2.0)]])
+        if self.unitary is None:
+            self.unitary = np.matrix([[np.exp(-1j * self.params[0] / 2.0), 0],
+                                      [0, np.exp(1j * self.params[0] / 2.0)]])
+        return self.unitary
 
 
 class RXXGate(Gate):
@@ -128,11 +152,15 @@ class RXXGate(Gate):
         return None
 
     def get_unitary(self) -> np.ndarray:
-        ct = np.cos(self.params[0] / 2.0)
-        st = np.sin(self.params[0] / 2.0)
+        if self.unitary is None:
+            ct = np.cos(self.params[0] / 2.0)
+            st = np.sin(self.params[0] / 2.0)
 
-        return np.matrix([[ct, 0, 0, -1j * st], [0, ct, -1j * st, 0],
-                          [0, -1j * st, ct, 0], [-1j * st, 0, 0, ct]])
+            self.unitary = np.matrix([[ct, 0, 0,
+                                       -1j * st], [0, ct, -1j * st, 0],
+                                      [0, -1j * st, ct, 0],
+                                      [-1j * st, 0, 0, ct]])
+        return self.unitary
 
 
 if __name__ == "__main__":

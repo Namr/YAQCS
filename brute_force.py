@@ -1,4 +1,4 @@
-from yaqcs import RXGate, RXXGate, Circuit
+from yaqcs import RXGate, RXXGate, Circuit, RYGate, RZGate
 from math import pi, sqrt
 import copy
 import time
@@ -14,9 +14,19 @@ allowed_gates = [
     RXXGate([pi / 2]),
     RXGate([pi / 2]),
     RXGate([-pi / 2]),
+    RYGate([pi / 2]),
+    RYGate([-pi / 2]),
+    RZGate([pi / 2]),
+    RZGate([-pi / 2]),
 ]
 
-#target_unitary = [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]]
+timerS = time.time()
+
+r2o2 = sqrt(2.0) / 2.0
+ww = r2o2 + r2o2 * 1.0j
+www = -r2o2 + -r2o2 * 1.0j
+target_unitary = [[www, 0, 0, 0], [0, www, 0, 0], [0, 0, 0, ww], [0, 0, ww, 0]]
+'''
 target_unitary = [[
     0.35355 - 0.35355j, -0.35355 + 0.35355j, 0.35355 - 0.35355j,
     0.35355 - 0.35355j
@@ -33,6 +43,8 @@ target_unitary = [[
                       0.35355 - 0.35355j, 0.35355 - 0.35355j,
                       -0.35355 + 0.35355j, 0.35355 - 0.35355j
                   ]]
+
+'''
 
 
 def test_circuit(qubits: int, circuit: list) -> bool:
@@ -62,8 +74,14 @@ def pure_brute_force(qubits: int,
                                                   range(qubits)))
 
     count = 0
+    gCount = 0
+    print(len(list(itertools.product(gates_with_positions, repeat=max_depth))))
+
     for circuit in itertools.product(gates_with_positions, repeat=max_depth):
         count = count + 1
+        gCount = gCount + 1
+        if gCount % 1000 == 0:
+            print(time.time() - timerS)
         if count == stride:
             count = 0
             if test_circuit(qubits, circuit):
@@ -76,8 +94,7 @@ if __name__ == "__main__":
     if USING_MPI:
         comm = MPI.COMM_WORLD
         rank = comm.Get_rank()
-
-    pure_brute_force(2, allowed_gates, 3, stride=rank - 1)
-
-    if USING_MPI:
+        pure_brute_force(2, allowed_gates, 3, stride=rank - 1)
         comm.Barrier()
+    else:
+        pure_brute_force(2, allowed_gates, 5)
