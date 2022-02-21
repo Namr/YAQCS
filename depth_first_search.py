@@ -109,7 +109,6 @@ def depth_first_search(qubits: int,
     for d in range(max_depth):
         stack = []
         blacklist = []
-        print("did one iter")
         while len(blacklist) < len(gates_with_positions)**(d + 1):
             # add the next best gate for this step
             start_set = find_min_dist_choice(qubits,
@@ -134,6 +133,7 @@ def depth_first_search(qubits: int,
 
             blacklist.append(start_set)
 
+        print("did one iter")
     return False
 
 
